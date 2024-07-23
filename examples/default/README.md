@@ -48,9 +48,8 @@ module "naming" {
 }
 
 # This is required for resource modules
-resource "azurerm_resource_group" "rg" {
-  location = "eastus"
-  name     = local.resource_group_name
+data "azurerm_resource_group" "rg" {
+  name = local.resource_group_name
 }
 
 data "azurerm_client_config" "current" {}
@@ -68,14 +67,14 @@ module "test" {
     server.name => server.ipv4Address
   }
   name                     = each.key
-  resource_group_name      = local.resource_group_name
+  resource_group_name      = data.azurerm_resource_group.rg.name
   local_admin_user         = var.local_admin_user
   local_admin_password     = var.local_admin_password
   authentication_method    = "Credssp"
   server_ip                = var.virtual_host_ip == "" ? each.value : var.virtual_host_ip
   winrm_port               = var.virtual_host_ip == "" ? 5985 : local.serverPorts[each.key]
   subscription_id          = var.subscription_id
-  location                 = azurerm_resource_group.rg.location
+  location                 = data.azurerm_resource_group.rg.location
   tenant                   = data.azurerm_client_config.current.tenant_id
   service_principal_id     = var.service_principal_id
   service_principal_secret = var.service_principal_secret
@@ -100,9 +99,9 @@ The following requirements are needed by this module:
 
 The following resources are used by this module:
 
-- [azurerm_resource_group.rg](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) (resource)
 - [random_integer.region_index](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/integer) (resource)
 - [azurerm_client_config.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) (data source)
+- [azurerm_resource_group.rg](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/resource_group) (data source)
 
 <!-- markdownlint-disable MD013 -->
 ## Required Inputs
