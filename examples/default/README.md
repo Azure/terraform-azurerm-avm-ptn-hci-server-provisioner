@@ -48,10 +48,12 @@ module "naming" {
 }
 
 # This is required for resource modules
-resource "azurerm_resource_group" "this" {
-  location = module.regions.regions[random_integer.region_index.result].name
-  name     = module.naming.resource_group.name_unique
+resource "azurerm_resource_group" "rg" {
+  location = "eastus"
+  name     = local.resource_group_name
 }
+
+data "azurerm_client_config" "current" {}
 
 # This is the module call
 # Do not specify location here due to the randomization above.
@@ -61,11 +63,23 @@ module "test" {
   source = "../../"
   # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
   # ...
-  location            = azurerm_resource_group.this.location
-  name                = "TODO" # TODO update with module.naming.<RESOURCE_TYPE>.name_unique
-  resource_group_name = azurerm_resource_group.this.name
-
-  enable_telemetry = var.enable_telemetry # see variables.tf
+  for_each = {
+    for index, server in local.servers :
+    server.name => server.ipv4Address
+  }
+  name                     = each.key
+  resource_group_name      = local.resource_group_name
+  local_admin_user         = var.local_admin_user
+  local_admin_password     = var.local_admin_password
+  authentication_method    = "Credssp"
+  server_ip                = var.virtual_host_ip == "" ? each.value : var.virtual_host_ip
+  winrm_port               = var.virtual_host_ip == "" ? 5985 : local.serverPorts[each.key]
+  subscription_id          = var.subscription_id
+  location                 = azurerm_resource_group.rg.location
+  tenant                   = data.azurerm_client_config.current.tenant_id
+  service_principal_id     = var.service_principal_id
+  service_principal_secret = var.service_principal_secret
+  expandC                  = var.virtual_host_ip == "" ? false : true
 }
 ```
 
@@ -82,29 +96,72 @@ The following requirements are needed by this module:
 
 - <a name="requirement_random"></a> [random](#requirement\_random) (~> 3.5)
 
-## Providers
-
-The following providers are used by this module:
-
-- <a name="provider_azurerm"></a> [azurerm](#provider\_azurerm) (~> 3.74)
-
-- <a name="provider_random"></a> [random](#provider\_random) (~> 3.5)
-
 ## Resources
 
 The following resources are used by this module:
 
-- [azurerm_resource_group.this](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) (resource)
+- [azurerm_resource_group.rg](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) (resource)
 - [random_integer.region_index](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/integer) (resource)
+- [azurerm_client_config.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) (data source)
 
 <!-- markdownlint-disable MD013 -->
 ## Required Inputs
 
-No required inputs.
+The following input variables are required:
+
+### <a name="input_local_admin_password"></a> [local\_admin\_password](#input\_local\_admin\_password)
+
+Description: The password for the local administrator account.
+
+Type: `string`
+
+### <a name="input_local_admin_user"></a> [local\_admin\_user](#input\_local\_admin\_user)
+
+Description: The username for the local administrator account.
+
+Type: `string`
+
+### <a name="input_runnumber"></a> [runnumber](#input\_runnumber)
+
+Description: The run number
+
+Type: `string`
+
+### <a name="input_service_principal_id"></a> [service\_principal\_id](#input\_service\_principal\_id)
+
+Description: The service principal ID for the Azure account.
+
+Type: `string`
+
+### <a name="input_service_principal_secret"></a> [service\_principal\_secret](#input\_service\_principal\_secret)
+
+Description: The service principal secret for the Azure account.
+
+Type: `string`
+
+### <a name="input_subscription_id"></a> [subscription\_id](#input\_subscription\_id)
+
+Description: The subscription ID for the Azure account.
+
+Type: `string`
+
+### <a name="input_virtual_host_ip"></a> [virtual\_host\_ip](#input\_virtual\_host\_ip)
+
+Description: The virtual host IP address.
+
+Type: `string`
 
 ## Optional Inputs
 
 The following input variables are optional (have default values):
+
+### <a name="input_authentication_method"></a> [authentication\_method](#input\_authentication\_method)
+
+Description: The authentication method for Enter-PSSession.
+
+Type: `string`
+
+Default: `"Default"`
 
 ### <a name="input_enable_telemetry"></a> [enable\_telemetry](#input\_enable\_telemetry)
 

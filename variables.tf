@@ -1,3 +1,13 @@
+variable "local_admin_password" {
+  type        = string
+  description = "The password for the local administrator account."
+}
+
+variable "local_admin_user" {
+  type        = string
+  description = "The username for the local administrator account."
+}
+
 variable "location" {
   type        = string
   description = "Azure region where the resource should be deployed."
@@ -6,20 +16,49 @@ variable "location" {
 
 variable "name" {
   type        = string
-  description = "The name of the this resource."
-
-  validation {
-    condition     = can(regex("TODO", var.name))
-    error_message = "The name must be TODO." # TODO remove the example below once complete:
-    #condition     = can(regex("^[a-z0-9]{5,50}$", var.name))
-    #error_message = "The name must be between 5 and 50 characters long and can only contain lowercase letters and numbers."
-  }
+  description = "The name of the server."
 }
 
 # This is required for most resource modules
 variable "resource_group_name" {
   type        = string
   description = "The resource group where the resources will be deployed."
+}
+
+variable "server_ip" {
+  type        = string
+  description = "The IP address of the server."
+}
+
+variable "service_principal_id" {
+  type        = string
+  description = "The service principal ID for the Azure account."
+}
+
+variable "service_principal_secret" {
+  type        = string
+  description = "The service principal secret for the Azure account."
+}
+
+variable "subscription_id" {
+  type        = string
+  description = "The subscription ID for the Azure account."
+}
+
+variable "tenant" {
+  type        = string
+  description = "The tenant ID for the Azure account."
+}
+
+variable "authentication_method" {
+  type        = string
+  default     = "Default"
+  description = "The authentication method for Enter-PSSession."
+
+  validation {
+    condition     = can(regex("^(Default|Basic|Negotiate|NegotiateWithImplicitCredential|Credssp|Digest|Kerberos)$", var.authentication_method))
+    error_message = "Value of authentication_method should be {Default | Basic | Negotiate | NegotiateWithImplicitCredential | Credssp | Digest | Kerberos}"
+  }
 }
 
 # required AVM interfaces
@@ -99,6 +138,11 @@ For more information see <https://aka.ms/avm/telemetryinfo>.
 If it is set to false, then no telemetry will be collected.
 DESCRIPTION
   nullable    = false
+}
+
+variable "expandC" {
+  type    = bool
+  default = false
 }
 
 variable "lock" {
@@ -231,4 +275,10 @@ variable "tags" {
   type        = map(string)
   default     = null
   description = "(Optional) Tags of the resource."
+}
+
+variable "winrm_port" {
+  type        = number
+  default     = 5985
+  description = "WinRM port"
 }
