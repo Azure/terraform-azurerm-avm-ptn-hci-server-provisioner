@@ -3,7 +3,7 @@ param(
     $password,
     $authType,
     $ip, $port,
-    $subscription_id, $resource_group_name, $region, $tenant, $service_principal_id, $service_principal_secret, $expandC
+    $subscription_id, $resource_group_name, $region, $tenant, $service_principal_id, $service_principal_secret, $expand_c
 )
 
 $script:ErrorActionPreference = 'Stop'
@@ -44,7 +44,7 @@ for ($count = 0; $count -lt 3; $count++) {
                 }
             }
 
-            if ($expandC) {
+            if ($expand_c) {
                 # Expand C volume as much as possible
                 $drive_letter = "C"
                 $size = (Get-PartitionSupportedSize -DriveLetter $drive_letter)

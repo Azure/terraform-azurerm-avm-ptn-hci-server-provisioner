@@ -34,17 +34,6 @@ variable "virtual_host_ip" {
   description = "The virtual host IP address."
 }
 
-variable "authentication_method" {
-  type        = string
-  default     = "Default"
-  description = "The authentication method for Enter-PSSession."
-
-  validation {
-    condition     = can(regex("^(Default|Basic|Negotiate|NegotiateWithImplicitCredential|Credssp|Digest|Kerberos)$", var.authentication_method))
-    error_message = "Value of authentication_method should be {Default | Basic | Negotiate | NegotiateWithImplicitCredential | Credssp | Digest | Kerberos}"
-  }
-}
-
 variable "enable_telemetry" {
   type        = bool
   default     = true

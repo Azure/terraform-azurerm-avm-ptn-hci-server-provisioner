@@ -1,6 +1,6 @@
 locals {
   resource_group_name = "${local.site_id}-rg"
-  serverPorts = {
+  server_ports = {
     "AzSHOST1" = 15985,
     "AzSHOST2" = 25985
   }

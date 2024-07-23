@@ -11,10 +11,6 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 3.74"
     }
-    modtm = {
-      source  = "azure/modtm"
-      version = "~> 0.3"
-    }
     random = {
       source  = "hashicorp/random"
       version = "~> 3.5"
@@ -66,19 +62,21 @@ module "test" {
     for index, server in local.servers :
     server.name => server.ipv4Address
   }
+
+  enable_telemetry         = var.enable_telemetry # see variables.tf
   name                     = each.key
   resource_group_name      = data.azurerm_resource_group.rg.name
   local_admin_user         = var.local_admin_user
   local_admin_password     = var.local_admin_password
   authentication_method    = "Credssp"
   server_ip                = var.virtual_host_ip == "" ? each.value : var.virtual_host_ip
-  winrm_port               = var.virtual_host_ip == "" ? 5985 : local.serverPorts[each.key]
+  winrm_port               = var.virtual_host_ip == "" ? 5985 : local.server_ports[each.key]
   subscription_id          = var.subscription_id
   location                 = data.azurerm_resource_group.rg.location
   tenant                   = data.azurerm_client_config.current.tenant_id
   service_principal_id     = var.service_principal_id
   service_principal_secret = var.service_principal_secret
-  expandC                  = var.virtual_host_ip == "" ? false : true
+  expand_c                 = var.virtual_host_ip == "" ? false : true
 }
 ```
 
@@ -90,8 +88,6 @@ The following requirements are needed by this module:
 - <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) (~> 1.5)
 
 - <a name="requirement_azurerm"></a> [azurerm](#requirement\_azurerm) (~> 3.74)
-
-- <a name="requirement_modtm"></a> [modtm](#requirement\_modtm) (~> 0.3)
 
 - <a name="requirement_random"></a> [random](#requirement\_random) (~> 3.5)
 
@@ -153,14 +149,6 @@ Type: `string`
 ## Optional Inputs
 
 The following input variables are optional (have default values):
-
-### <a name="input_authentication_method"></a> [authentication\_method](#input\_authentication\_method)
-
-Description: The authentication method for Enter-PSSession.
-
-Type: `string`
-
-Default: `"Default"`
 
 ### <a name="input_enable_telemetry"></a> [enable\_telemetry](#input\_enable\_telemetry)
 
