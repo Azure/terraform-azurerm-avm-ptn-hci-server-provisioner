@@ -8,9 +8,9 @@ variable "local_admin_user" {
   description = "The username for the local administrator account."
 }
 
-variable "runnumber" {
+variable "resource_group_name" {
   type        = string
-  description = "The run number"
+  description = "The resource group where the resources will be deployed."
 }
 
 variable "service_principal_id" {

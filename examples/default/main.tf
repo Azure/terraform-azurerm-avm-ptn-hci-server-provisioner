@@ -42,7 +42,7 @@ module "naming" {
 
 # This is required for resource modules
 data "azurerm_resource_group" "rg" {
-  name = local.resource_group_name
+  name = var.resource_group_name
 }
 
 data "azurerm_client_config" "current" {}
