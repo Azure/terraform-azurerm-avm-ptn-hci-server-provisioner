@@ -1,3 +1,39 @@
+variable "local_admin_password" {
+  type        = string
+  description = "The password for the local administrator account."
+}
+
+variable "local_admin_user" {
+  type        = string
+  description = "The username for the local administrator account."
+}
+
+variable "runnumber" {
+  type        = string
+  description = "The run number"
+}
+
+variable "service_principal_id" {
+  type        = string
+  description = "The service principal ID for the Azure account."
+}
+
+variable "service_principal_secret" {
+  type        = string
+  description = "The service principal secret for the Azure account."
+}
+
+variable "subscription_id" {
+  type        = string
+  description = "The subscription ID for the Azure account."
+}
+
+# Virtual host related variables
+variable "virtual_host_ip" {
+  type        = string
+  description = "The virtual host IP address."
+}
+
 variable "enable_telemetry" {
   type        = bool
   default     = true
