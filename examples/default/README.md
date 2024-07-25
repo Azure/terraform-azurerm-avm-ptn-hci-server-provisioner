@@ -48,7 +48,7 @@ module "naming" {
 
 # This is required for resource modules
 data "azurerm_resource_group" "rg" {
-  name = local.resource_group_name
+  name = var.resource_group_name
 }
 
 data "azurerm_client_config" "current" {}
@@ -119,9 +119,9 @@ Description: The username for the local administrator account.
 
 Type: `string`
 
-### <a name="input_runnumber"></a> [runnumber](#input\_runnumber)
+### <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name)
 
-Description: The run number
+Description: The resource group where the resources will be deployed.
 
 Type: `string`
 
