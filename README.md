@@ -154,14 +154,6 @@ Type: `bool`
 
 Default: `false`
 
-### <a name="input_rp_service_principal_object_id"></a> [rp\_service\_principal\_object\_id](#input\_rp\_service\_principal\_object\_id)
-
-Description: The object ID of the HCI resource provider service principal.
-
-Type: `string`
-
-Default: `""`
-
 ### <a name="input_tags"></a> [tags](#input\_tags)
 
 Description: (Optional) Tags of the resource.
