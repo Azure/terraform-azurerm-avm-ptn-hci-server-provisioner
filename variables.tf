@@ -32,6 +32,7 @@ variable "server_ip" {
 }
 
 variable "server_name" {
+  type        = string
   description = "The name of the server."
 }
 

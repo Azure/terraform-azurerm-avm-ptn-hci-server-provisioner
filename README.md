@@ -20,7 +20,7 @@ The following requirements are needed by this module:
 
 The following resources are used by this module:
 
-- [azurerm_role_assignment.MachineRoleAssign](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) (resource)
+- [azurerm_role_assignment.machine_role_assign](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) (resource)
 - [modtm_telemetry.telemetry](https://registry.terraform.io/providers/azure/modtm/latest/docs/resources/telemetry) (resource)
 - [random_uuid.telemetry](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/uuid) (resource)
 - [terraform_data.provisioner](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) (resource)
@@ -74,7 +74,7 @@ Type: `string`
 
 Description: The name of the server.
 
-Type: `any`
+Type: `string`
 
 ### <a name="input_service_principal_id"></a> [service\_principal\_id](#input\_service\_principal\_id)
 

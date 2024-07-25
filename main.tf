@@ -26,7 +26,7 @@ data "azurerm_arc_machine" "server" {
   resource_group_name = var.resource_group_name
 }
 
-resource "azurerm_role_assignment" "MachineRoleAssign" {
+resource "azurerm_role_assignment" "machine_role_assign" {
   for_each = local.roles
 
   principal_id         = data.azurerm_arc_machine.server.identity[0].principal_id
