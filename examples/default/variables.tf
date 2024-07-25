@@ -22,6 +22,7 @@ variable "service_principal_id" {
 variable "service_principal_secret" {
   type        = string
   description = "The service principal secret for the Azure account."
+  sensitive   = true
 }
 
 variable "subscription_id" {

@@ -31,6 +31,10 @@ variable "server_ip" {
   description = "The IP address of the server."
 }
 
+variable "server_name" {
+  description = "The name of the server."
+}
+
 variable "service_principal_id" {
   type        = string
   description = "The service principal ID for the Azure account."
@@ -39,6 +43,7 @@ variable "service_principal_id" {
 variable "service_principal_secret" {
   type        = string
   description = "The service principal secret for the Azure account."
+  sensitive   = true
 }
 
 variable "subscription_id" {

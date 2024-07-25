@@ -21,3 +21,15 @@ resource "terraform_data" "provisioner" {
   }
 }
 
+data "azurerm_arc_machine" "server" {
+  name                = var.server_name
+  resource_group_name = var.resource_group_name
+}
+
+resource "azurerm_role_assignment" "MachineRoleAssign" {
+  for_each = local.roles
+
+  principal_id         = data.azurerm_arc_machine.server.identity[0].principal_id
+  scope                = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}"
+  role_definition_name = each.value
+}

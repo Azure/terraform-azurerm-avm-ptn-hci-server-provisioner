@@ -20,10 +20,12 @@ The following requirements are needed by this module:
 
 The following resources are used by this module:
 
+- [azurerm_role_assignment.MachineRoleAssign](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) (resource)
 - [modtm_telemetry.telemetry](https://registry.terraform.io/providers/azure/modtm/latest/docs/resources/telemetry) (resource)
 - [random_uuid.telemetry](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/uuid) (resource)
 - [terraform_data.provisioner](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) (resource)
 - [terraform_data.replacement](https://registry.terraform.io/providers/hashicorp/terraform/latest/docs/resources/data) (resource)
+- [azurerm_arc_machine.server](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/arc_machine) (data source)
 - [azurerm_client_config.telemetry](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) (data source)
 - [modtm_module_source.telemetry](https://registry.terraform.io/providers/azure/modtm/latest/docs/data-sources/module_source) (data source)
 
@@ -67,6 +69,12 @@ Type: `string`
 Description: The IP address of the server.
 
 Type: `string`
+
+### <a name="input_server_name"></a> [server\_name](#input\_server\_name)
+
+Description: The name of the server.
+
+Type: `any`
 
 ### <a name="input_service_principal_id"></a> [service\_principal\_id](#input\_service\_principal\_id)
 
@@ -169,6 +177,10 @@ The following outputs are exported:
 ### <a name="output_resource_id"></a> [resource\_id](#output\_resource\_id)
 
 Description: This is the full output for the resource.
+
+### <a name="output_server"></a> [server](#output\_server)
+
+Description: The arc server object
 
 ## Modules
 
