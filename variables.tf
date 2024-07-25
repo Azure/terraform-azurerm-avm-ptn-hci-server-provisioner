@@ -108,6 +108,12 @@ variable "expand_c" {
   description = "Expand C volume as much as possible"
 }
 
+variable "rp_service_principal_object_id" {
+  type        = string
+  default     = ""
+  description = "The object ID of the HCI resource provider service principal."
+}
+
 # tflint-ignore: terraform_unused_declarations
 variable "tags" {
   type        = map(string)

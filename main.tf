@@ -24,6 +24,8 @@ resource "terraform_data" "provisioner" {
 data "azurerm_arc_machine" "server" {
   name                = var.server_name
   resource_group_name = var.resource_group_name
+
+  depends_on = [terraform_data.provisioner]
 }
 
 resource "azurerm_role_assignment" "machine_role_assign" {
@@ -32,4 +34,7 @@ resource "azurerm_role_assignment" "machine_role_assign" {
   principal_id         = data.azurerm_arc_machine.server.identity[0].principal_id
   scope                = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}"
   role_definition_name = each.value
+
+  depends_on = [data.azurerm_arc_machine.server]
 }
+
