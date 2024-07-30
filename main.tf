@@ -22,7 +22,7 @@ resource "terraform_data" "provisioner" {
 }
 
 data "azurerm_arc_machine" "server" {
-  name                = var.server_name
+  name                = var.name
   resource_group_name = var.resource_group_name
 
   depends_on = [terraform_data.provisioner]

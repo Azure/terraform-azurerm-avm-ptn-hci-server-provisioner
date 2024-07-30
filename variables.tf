@@ -31,11 +31,6 @@ variable "server_ip" {
   description = "The IP address of the server."
 }
 
-variable "server_name" {
-  type        = string
-  description = "The name of the server."
-}
-
 variable "service_principal_id" {
   type        = string
   description = "The service principal ID for the Azure account."

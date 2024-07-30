@@ -68,7 +68,6 @@ module "test" {
 
   enable_telemetry         = var.enable_telemetry # see variables.tf
   name                     = each.key
-  server_name              = each.key
   resource_group_name      = data.azurerm_resource_group.rg.name
   local_admin_user         = var.local_admin_user
   local_admin_password     = var.local_admin_password

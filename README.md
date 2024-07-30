@@ -70,12 +70,6 @@ Description: The IP address of the server.
 
 Type: `string`
 
-### <a name="input_server_name"></a> [server\_name](#input\_server\_name)
-
-Description: The name of the server.
-
-Type: `string`
-
 ### <a name="input_service_principal_id"></a> [service\_principal\_id](#input\_service\_principal\_id)
 
 Description: The service principal ID for the Azure account.
