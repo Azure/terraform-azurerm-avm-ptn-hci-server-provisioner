@@ -53,7 +53,7 @@ data "azurerm_client_config" "current" {}
 # with a data source.
 module "test" {
   source = "../../"
-  # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
+  # source             = "Azure/avm-ptn-hci-server-provisioner/azurerm"
   # ...
   for_each = {
     for index, server in local.servers :
