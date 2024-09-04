@@ -3,7 +3,7 @@ param(
     $password,
     $authType,
     $ip, $port,
-    $subscription_id, $resource_group_name, $region, $tenant, $service_principal_id, $service_principal_secret, $expand_c
+    $subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret, $expandC
 )
 
 $script:ErrorActionPreference = 'Stop'
@@ -12,10 +12,41 @@ $count = 0
 
 if ($authType -eq "CredSSP") {
     try {
-        Enable-WSManCredSSP -Role Client -DelegateComputer $ip -Force
+        echo "set trusted hosts"
+        Set-Item wsman:localhost\client\trustedhosts -value * -Force
+        echo "enable client CredSSP"
+        Enable-WSManCredSSP -Role Client -DelegateComputer * -Force
+
+        echo "Allow fresh credentials"
+        $key = 'hklm:\SOFTWARE\Policies\Microsoft\Windows\CredentialsDelegation'
+        if (!(Test-Path $key)) {
+            md $key
+        }
+        New-ItemProperty -Path $key -Name AllowFreshCredentials -Value 1 -PropertyType Dword -Force            
+
+        $allowFreshCredentialsKey = Join-Path $key 'AllowFreshCredentials'
+        if (!(Test-Path $allowFreshCredentialsKey)) {
+            md $allowFreshCredentialsKey
+        }
+
+        if (!(Get-ItemProperty -Path $allowFreshCredentialsKey -Name 'AzureArcIaCAutomation' -ErrorAction SilentlyContinue)) {
+            New-ItemProperty -Path $allowFreshCredentialsKey -Name 'AzureArcIaCAutomation' -Value 'WSMAN/*' -PropertyType String -Force
+        }
+
+        echo "Allow fresh credentials when NTLM only"
+        New-ItemProperty -Path $key -Name AllowFreshCredentialsWhenNTLMOnly -Value 1 -PropertyType Dword -Force
+
+        $allowFreshCredentialsWhenNTLMOnlyKey = Join-Path $key 'AllowFreshCredentialsWhenNTLMOnly'
+        if (!(Test-Path $allowFreshCredentialsWhenNTLMOnlyKey)) {
+            md $allowFreshCredentialsWhenNTLMOnlyKey
+        }
+
+        if (!(Get-ItemProperty -Path $allowFreshCredentialsWhenNTLMOnlyKey -Name 1 -ErrorAction SilentlyContinue)) {
+            New-ItemProperty -Path $allowFreshCredentialsWhenNTLMOnlyKey -Name 1 -Value 'WSMAN/*' -PropertyType String -Force
+        }
     }
     catch {
-        echo "Enable-WSManCredSSP failed"
+        echo "Enable-WSManCredSSP failed: $_"
     }
 }
 for ($count = 0; $count -lt 3; $count++) {
@@ -25,7 +56,7 @@ for ($count = 0; $count -lt 3; $count++) {
         $session = New-PSSession -ComputerName $ip -Port $port -Authentication $authType -Credential $cred
 
         Invoke-Command -Session $session -ScriptBlock {
-            Param ($subscription_id, $resource_group_name, $region, $tenant, $service_principal_id, $service_principal_secret)
+            Param ($subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret)
             $script:ErrorActionPreference = 'Stop'
 
             function Install-ModuleIfMissing {
@@ -44,7 +75,7 @@ for ($count = 0; $count -lt 3; $count++) {
                 }
             }
 
-            if ($expand_c) {
+            if ($expandC) {
                 # Expand C volume as much as possible
                 $drive_letter = "C"
                 $size = (Get-PartitionSupportedSize -DriveLetter $drive_letter)
@@ -68,13 +99,13 @@ for ($count = 0; $count -lt 3; $count++) {
                 throw "BITS transfer failed after 3 minutes. Job state: $job.JobState"
             }
 
-            $creds = [System.Management.Automation.PSCredential]::new($service_principal_id, (ConvertTo-SecureString $service_principal_secret -AsPlainText -Force))
+            $creds = [System.Management.Automation.PSCredential]::new($servicePrincipalId, (ConvertTo-SecureString $servicePrincipalSecret -AsPlainText -Force))
 
             Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
 
             Install-ModuleIfMissing -Name Az -Repository PSGallery -Force
 
-            Connect-AzAccount -Subscription $subscription_id -Tenant $tenant -Credential $creds -ServicePrincipal
+            Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
             echo "login to Azure"
 
             Install-Module AzSHCI.ARCInstaller -Force -AllowClobber
@@ -87,7 +118,7 @@ for ($count = 0; $count -lt 3; $count++) {
             $id = (Get-AzContext).Tenant.Id
             $token = (Get-AzAccessToken).Token
             $accountid = (Get-AzContext).Account.Id
-            Invoke-AzStackHciArcInitialization -SubscriptionId $subscription_id -ResourceGroup $resource_group_name -TenantID $id -Region $region -Cloud "AzureCloud" -ArmAccessToken $token -AccountID  $accountid
+            Invoke-AzStackHciArcInitialization -SubscriptionID $subscriptionId -ResourceGroup $resourceGroupName -TenantID $id -Region $region -Cloud "AzureCloud" -ArmAccessToken $token -AccountID  $accountid
             $exitCode = $LASTEXITCODE
             $script:ErrorActionPreference = 'Stop'
             if ($exitCode -eq 0) {
@@ -100,8 +131,8 @@ for ($count = 0; $count -lt 3; $count++) {
             sleep 600
             $ready = $false
             while (!$ready) {
-                Connect-AzAccount -Subscription $subscription_id -Tenant $tenant -Credential $creds -ServicePrincipal
-                $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeLifecycleManager" -ResourceGroup $resource_group_name -MachineName $env:COMPUTERNAME -SubscriptionId $subscription_id
+                Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
+                $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeLifecycleManager" -ResourceGroup $resourceGroupName -MachineName $env:COMPUTERNAME -SubscriptionId $subscriptionId
                 if ($extension.ProvisioningState -eq "Succeeded") {
                     $ready = $true
                 }
@@ -111,7 +142,7 @@ for ($count = 0; $count -lt 3; $count++) {
                 }
             }
 
-        } -ArgumentList $subscription_id, $resource_group_name, $region, $tenant, $service_principal_id, $service_principal_secret
+        } -ArgumentList $subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret
         break
     }
     catch {
