@@ -12,10 +12,41 @@ $count = 0
 
 if ($authType -eq "CredSSP") {
     try {
-        Enable-WSManCredSSP -Role Client -DelegateComputer $ip -Force
+        echo "set trusted hosts"
+        Set-Item wsman:localhost\client\trustedhosts -value * -Force
+        echo "enable client CredSSP"
+        Enable-WSManCredSSP -Role Client -DelegateComputer * -Force
+
+        echo "Allow fresh credentials"
+        $key = 'hklm:\SOFTWARE\Policies\Microsoft\Windows\CredentialsDelegation'
+        if (!(Test-Path $key)) {
+            md $key
+        }
+        New-ItemProperty -Path $key -Name AllowFreshCredentials -Value 1 -PropertyType Dword -Force            
+
+        $allowFreshCredentialsKey = Join-Path $key 'AllowFreshCredentials'
+        if (!(Test-Path $allowFreshCredentialsKey)) {
+            md $allowFreshCredentialsKey
+        }
+
+        if (!(Get-ItemProperty -Path $allowFreshCredentialsKey -Name 'AzureArcIaCAutomation' -ErrorAction SilentlyContinue)) {
+            New-ItemProperty -Path $allowFreshCredentialsKey -Name 'AzureArcIaCAutomation' -Value 'WSMAN/*' -PropertyType String -Force
+        }
+
+        echo "Allow fresh credentials when NTLM only"
+        New-ItemProperty -Path $key -Name AllowFreshCredentialsWhenNTLMOnly -Value 1 -PropertyType Dword -Force
+
+        $allowFreshCredentialsWhenNTLMOnlyKey = Join-Path $key 'AllowFreshCredentialsWhenNTLMOnly'
+        if (!(Test-Path $allowFreshCredentialsWhenNTLMOnlyKey)) {
+            md $allowFreshCredentialsWhenNTLMOnlyKey
+        }
+
+        if (!(Get-ItemProperty -Path $allowFreshCredentialsWhenNTLMOnlyKey -Name 1 -ErrorAction SilentlyContinue)) {
+            New-ItemProperty -Path $allowFreshCredentialsWhenNTLMOnlyKey -Name 1 -Value 'WSMAN/*' -PropertyType String -Force
+        }
     }
     catch {
-        echo "Enable-WSManCredSSP failed"
+        echo "Enable-WSManCredSSP failed: $_"
     }
 }
 for ($count = 0; $count -lt 3; $count++) {
@@ -87,7 +118,7 @@ for ($count = 0; $count -lt 3; $count++) {
             $id = (Get-AzContext).Tenant.Id
             $token = (Get-AzAccessToken).Token
             $accountid = (Get-AzContext).Account.Id
-            Invoke-AzStackHciArcInitialization -SubscriptionId $subscriptionId -ResourceGroup $resourceGroupName -TenantID $id -Region $region -Cloud "AzureCloud" -ArmAccessToken $token -AccountID  $accountid
+            Invoke-AzStackHciArcInitialization -SubscriptionID $subscriptionId -ResourceGroup $resourceGroupName -TenantID $id -Region $region -Cloud "AzureCloud" -ArmAccessToken $token -AccountID  $accountid
             $exitCode = $LASTEXITCODE
             $script:ErrorActionPreference = 'Stop'
             if ($exitCode -eq 0) {
