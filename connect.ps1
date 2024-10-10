@@ -129,8 +129,9 @@ for ($count = 0; $count -lt 3; $count++) {
             }
 
             sleep 600
+            $waitCount = 0
             $ready = $false
-            while (!$ready) {
+            while (!$ready -and $waitCount -lt 60) {
                 Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
                 $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeLifecycleManager" -ResourceGroup $resourceGroupName -MachineName $env:COMPUTERNAME -SubscriptionId $subscriptionId
                 if ($extension.ProvisioningState -eq "Succeeded") {
@@ -138,10 +139,23 @@ for ($count = 0; $count -lt 3; $count++) {
                 }
                 else {
                     echo "Waiting for LCM extension to be ready"
+                    $waitCount++
                     Start-Sleep -Seconds 30
                 }
             }
-
+            $ready = $false
+            while (!$ready -and $waitCount -lt 60) {
+                Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
+                $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeDeviceManagement" -ResourceGroup $resourceGroupName -MachineName $env:COMPUTERNAME -SubscriptionId $subscriptionId
+                if ($extension.ProvisioningState -eq "Succeeded") {
+                    $ready = $true
+                }
+                else {
+                    echo "Waiting for Device Management extension to be ready"
+                    $waitCount++
+                    Start-Sleep -Seconds 30
+                }
+            }
         } -ArgumentList $subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret
         break
     }
