@@ -3,7 +3,8 @@ param(
     $password,
     $authType,
     $ip, $port,
-    $subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret, $expandC
+    $subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret, $expandC,
+    $forUpgrade
 )
 
 $script:ErrorActionPreference = 'Stop'
@@ -75,46 +76,48 @@ for ($count = 0; $count -lt 3; $count++) {
                 }
             }
 
-            if ($expandC) {
-                # Expand C volume as much as possible
-                $drive_letter = "C"
-                $size = (Get-PartitionSupportedSize -DriveLetter $drive_letter)
-                if ($size.SizeMax -gt (Get-Partition -DriveLetter $drive_letter).Size) {
-                    echo "Resizing volume"
-                    Resize-Partition -DriveLetter $drive_letter -Size $size.SizeMax
+            if (!$forUpgrade) {
+                if ($expandC) {
+                    # Expand C volume as much as possible
+                    $drive_letter = "C"
+                    $size = (Get-PartitionSupportedSize -DriveLetter $drive_letter)
+                    if ($size.SizeMax -gt (Get-Partition -DriveLetter $drive_letter).Size) {
+                        echo "Resizing volume"
+                        Resize-Partition -DriveLetter $drive_letter -Size $size.SizeMax
+                    }
                 }
-            }
-
-            echo "Validate BITS is working"
-            $job = Start-BitsTransfer -Source https://aka.ms -Destination $env:TEMP -TransferType Download -Asynchronous
-            $count = 0
-            while ($job.JobState -ne "Transferred" -and $count -lt 30) {
-                if ($job.JobState -eq "TransientError") {
-                    throw "BITS transfer failed"
+    
+                echo "Validate BITS is working"
+                $job = Start-BitsTransfer -Source https://aka.ms -Destination $env:TEMP -TransferType Download -Asynchronous
+                $count = 0
+                while ($job.JobState -ne "Transferred" -and $count -lt 30) {
+                    if ($job.JobState -eq "TransientError") {
+                        throw "BITS transfer failed"
+                    }
+                    sleep 6
+                    $count++
                 }
-                sleep 6
-                $count++
+                if ($count -ge 30) {
+                    throw "BITS transfer failed after 3 minutes. Job state: $job.JobState"
+                }
+    
+                $creds = [System.Management.Automation.PSCredential]::new($servicePrincipalId, (ConvertTo-SecureString $servicePrincipalSecret -AsPlainText -Force))
+    
+                Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
+    
+                Install-ModuleIfMissing -Name Az -Repository PSGallery -Force
+    
+                Install-Module AzSHCI.ARCInstaller -Force -AllowClobber
+                Install-Module Az.StackHCI -Force -AllowClobber -RequiredVersion 2.2.3
+                Install-Module AzStackHci.EnvironmentChecker -Repository PSGallery -Force -AllowClobber
+                Install-ModuleIfMissing Az.Accounts -Force -AllowClobber
+                Install-ModuleIfMissing Az.ConnectedMachine -Force -AllowClobber
+                Install-ModuleIfMissing Az.Resources -Force -AllowClobber
+                echo "Installed modules"
             }
-            if ($count -ge 30) {
-                throw "BITS transfer failed after 3 minutes. Job state: $job.JobState"
-            }
-
-            $creds = [System.Management.Automation.PSCredential]::new($servicePrincipalId, (ConvertTo-SecureString $servicePrincipalSecret -AsPlainText -Force))
-
-            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
-
-            Install-ModuleIfMissing -Name Az -Repository PSGallery -Force
 
             Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
             echo "login to Azure"
-
-            Install-Module AzSHCI.ARCInstaller -Force -AllowClobber
-            Install-Module Az.StackHCI -Force -AllowClobber -RequiredVersion 2.2.3
-            Install-Module AzStackHci.EnvironmentChecker -Repository PSGallery -Force -AllowClobber
-            Install-ModuleIfMissing Az.Accounts -Force -AllowClobber
-            Install-ModuleIfMissing Az.ConnectedMachine -Force -AllowClobber
-            Install-ModuleIfMissing Az.Resources -Force -AllowClobber
-            echo "Installed modules"
             $id = (Get-AzContext).Tenant.Id
             $token = (Get-AzAccessToken).Token
             $accountid = (Get-AzContext).Account.Id

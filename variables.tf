@@ -85,3 +85,9 @@ variable "winrm_port" {
   default     = 5985
   description = "WinRM port"
 }
+
+variable "for_cluster_upgrade" {
+  type        = bool
+  default     = false
+  description = "Provisioner for cluster upgrade"
+}
