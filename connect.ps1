@@ -76,7 +76,9 @@ for ($count = 0; $count -lt 3; $count++) {
                 }
             }
 
-            if (!$forUpgrade) {
+            echo "For upgrade: $forUpgrade"
+
+            if ($forUpgrade -ne "true") {
                 if ($expandC) {
                     # Expand C volume as much as possible
                     $drive_letter = "C"
