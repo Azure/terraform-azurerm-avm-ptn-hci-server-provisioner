@@ -57,7 +57,7 @@ for ($count = 0; $count -lt 3; $count++) {
         $session = New-PSSession -ComputerName $ip -Port $port -Authentication $authType -Credential $cred
 
         Invoke-Command -Session $session -ScriptBlock {
-            Param ($subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret)
+            Param ($subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret, $expandC, $forUpgrade)
             $script:ErrorActionPreference = 'Stop'
 
             function Install-ModuleIfMissing {
@@ -161,7 +161,7 @@ for ($count = 0; $count -lt 3; $count++) {
                     Start-Sleep -Seconds 30
                 }
             }
-        } -ArgumentList $subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret
+        } -ArgumentList $subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret, $expandC, $forUpgrade
         break
     }
     catch {
