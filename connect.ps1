@@ -107,7 +107,6 @@ for ($count = 0; $count -lt 3; $count++) {
     
                 Install-ModuleIfMissing -Name Az -Repository PSGallery -Force
     
-                Install-Module AzSHCI.ARCInstaller -Force -AllowClobber
                 Install-Module Az.StackHCI -Force -AllowClobber -RequiredVersion 2.2.3
                 Install-Module AzStackHci.EnvironmentChecker -Repository PSGallery -Force -AllowClobber
                 Install-ModuleIfMissing Az.Accounts -Force -AllowClobber
@@ -115,6 +114,8 @@ for ($count = 0; $count -lt 3; $count++) {
                 Install-ModuleIfMissing Az.Resources -Force -AllowClobber
                 echo "Installed modules"
             }
+            
+            Install-Module AzSHCI.ARCInstaller -Force -AllowClobber
 
             $creds = [System.Management.Automation.PSCredential]::new($servicePrincipalId, (ConvertTo-SecureString $servicePrincipalSecret -AsPlainText -Force))
             Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
