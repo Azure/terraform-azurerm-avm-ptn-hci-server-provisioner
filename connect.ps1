@@ -119,7 +119,7 @@ for ($count = 0; $count -lt 3; $count++) {
                 wget -Uri "https://aka.ms/AzureConnectedMachineAgent" -OutFile "$env:TEMP\AzureConnectedMachineAgent.msi"
                 msiexec /i "$env:TEMP\AzureConnectedMachineAgent.msi" /l*v "$env:TEMP\AzureConnectedMachineAgentInstall.log" /qn
             }
-            & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --resource-group "$resourceGroupName" --resource-name "$machineName" --tenant-id "$tenantId" --location "$region" --subscription-id "$subscriptionId" --cloud "AzureCloud" --correlation-id "$correlationID" --access-token "$token";
+            & "$azcmagentPath" connect --resource-group "$resourceGroupName" --resource-name "$machineName" --tenant-id "$tenantId" --location "$region" --subscription-id "$subscriptionId" --cloud "AzureCloud" --correlation-id "$correlationID" --access-token "$token";
             $exitCode = $LASTEXITCODE
             if ($exitCode -eq 0) {
                 echo "Arc server connected!"
@@ -129,7 +129,7 @@ for ($count = 0; $count -lt 3; $count++) {
             }
 
             echo "PUT edge device resource to install mandatory extensions"
-            $uri = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName/providers/Microsoft.HybridCompute/machines/$machineName/providers/Microsoft.AzureStackHCI/edgeDevices/default?api-version=2021-10-01"
+            $uri = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName/providers/Microsoft.HybridCompute/machines/$machineName/providers/Microsoft.AzureStackHCI/edgeDevices/default?api-version=2024-01-01"
             $body = @{
                 "kind" = "HCI";
                 "properties" = @{};
