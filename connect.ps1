@@ -114,6 +114,11 @@ for ($count = 0; $count -lt 3; $count++) {
 
             $machineName = [System.Net.Dns]::GetHostName()
             $correlationID = New-Guid
+            $azcmagentPath = "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe"
+            if (!(Test-Path $azcmagentPath)) {
+                wget -Uri "https://aka.ms/AzureConnectedMachineAgent" -OutFile "$env:TEMP\AzureConnectedMachineAgent.msi"
+                msiexec /i "$env:TEMP\AzureConnectedMachineAgent.msi" /l*v "$env:TEMP\AzureConnectedMachineAgentInstall.log" /qn
+            }
             & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --resource-group "$resourceGroupName" --resource-name "$machineName" --tenant-id "$tenantId" --location "$region" --subscription-id "$subscriptionId" --cloud "AzureCloud" --correlation-id "$correlationID" --access-token "$token";
             $exitCode = $LASTEXITCODE
             if ($exitCode -eq 0) {
