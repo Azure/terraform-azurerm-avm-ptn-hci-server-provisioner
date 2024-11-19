@@ -3,7 +3,6 @@ resource "terraform_data" "replacement" {
 }
 
 resource "terraform_data" "provisioner" {
-  depends_on = [ azurerm_role_assignment.hci_rp_role_assign ]
   provisioner "local-exec" {
     command = "echo Connect ${var.name} to Azure Arc..."
   }
