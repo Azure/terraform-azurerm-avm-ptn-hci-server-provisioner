@@ -9,6 +9,7 @@ param(
 $script:ErrorActionPreference = 'Stop'
 echo "Start to connect Arc server!"
 $count = 0
+$retryCount = 3
 
 if ($authType -eq "CredSSP") {
     try {
@@ -49,7 +50,7 @@ if ($authType -eq "CredSSP") {
         echo "Enable-WSManCredSSP failed: $_"
     }
 }
-for ($count = 0; $count -lt 3; $count++) {
+for ($count = 0; $count -lt $retryCount; $count++) {
     try {
         $secpasswd = ConvertTo-SecureString $password -AsPlainText -Force
         $cred = New-Object System.Management.Automation.PSCredential -ArgumentList ".\$username", $secpasswd
@@ -181,6 +182,6 @@ for ($count = 0; $count -lt 3; $count++) {
     }
 }
 
-if ($count -ge 3) {
-    throw "Failed to connect Arc server after 3 retries."
+if ($count -ge $retryCount) {
+    throw "Failed to connect Arc server after $retryCount retries."
 }
