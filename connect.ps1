@@ -99,11 +99,6 @@ for ($count = 0; $count -lt 3; $count++) {
                 throw "BITS transfer failed after 3 minutes. Job state: $job.JobState"
             }
 
-            $creds = [System.Management.Automation.PSCredential]::new($servicePrincipalId, (ConvertTo-SecureString $servicePrincipalSecret -AsPlainText -Force))
-
-            echo "login to Azure"
-            Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
-
             echo "Install modules"
             Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
             Install-ModuleIfMissing -Name Az -Repository PSGallery -Force
@@ -111,6 +106,9 @@ for ($count = 0; $count -lt 3; $count++) {
             Install-ModuleIfMissing Az.ConnectedMachine -Force -AllowClobber
             Install-ModuleIfMissing Az.Resources -Force -AllowClobber
 
+            echo "login to Azure"
+            $creds = [System.Management.Automation.PSCredential]::new($servicePrincipalId, (ConvertTo-SecureString $servicePrincipalSecret -AsPlainText -Force))
+            Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
             $tenantId = (Get-AzContext).Tenant.Id
             $token = (Get-AzAccessToken).Token
 
