@@ -130,7 +130,7 @@ for ($count = 0; $count -lt $retryCount; $count++) {
             }
 
             echo "PUT edge device resource to install mandatory extensions"
-            $uri = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName/providers/Microsoft.HybridCompute/machines/$machineName/providers/Microsoft.AzureStackHCI/edgeDevices/default?api-version=2024-01-01"
+            $uri = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName/providers/Microsoft.HybridCompute/machines/$machineName/providers/Microsoft.AzureStackHCI/edgeDevices/default?api-version=2024-04-01"
             $body = @{
                 "kind" = "HCI";
                 "properties" = @{};
