@@ -137,7 +137,7 @@ for ($count = 0; $count -lt 3; $count++) {
             $headers = @{
                 "Authorization" = "Bearer $token";
             }
-            Invoke-RestMethod -Uri $uri -Method Put -Headers $headers -Body ($body | ConvertTo-Json)
+            Invoke-RestMethod -Uri $uri -Method Put -Headers $headers -Body ($body | ConvertTo-Json) -ContentType "application/json"
 
             echo "Waiting for LCM and Device Management extensions to be ready"
             sleep 600
