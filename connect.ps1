@@ -183,5 +183,6 @@ for ($count = 0; $count -lt $retryCount; $count++) {
 }
 
 if ($count -ge $retryCount) {
-    throw "Failed to connect Arc server after $retryCount retries."
+    echo "Failed to connect Arc server after $retryCount retries."
+    throw "Arc server connection failed"
 }
