@@ -47,6 +47,12 @@ variable "subscription_id" {
   description = "The subscription ID for the Azure account."
 }
 
+variable "rp_service_principal_object_id" {
+  type = string
+  default     = ""
+  description = "The object ID of the HCI resource provider service principal."
+}
+
 variable "tenant" {
   type        = string
   description = "The tenant ID for the Azure account."

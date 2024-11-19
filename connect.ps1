@@ -101,26 +101,23 @@ for ($count = 0; $count -lt 3; $count++) {
 
             $creds = [System.Management.Automation.PSCredential]::new($servicePrincipalId, (ConvertTo-SecureString $servicePrincipalSecret -AsPlainText -Force))
 
-            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
-
-            Install-ModuleIfMissing -Name Az -Repository PSGallery -Force
-
-            Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
             echo "login to Azure"
+            Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
 
-            Install-Module AzSHCI.ARCInstaller -Force -AllowClobber
-            Install-Module Az.StackHCI -Force -AllowClobber -RequiredVersion 2.2.3
-            Install-Module AzStackHci.EnvironmentChecker -Repository PSGallery -Force -AllowClobber
+            echo "Install modules"
+            Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
+            Install-ModuleIfMissing -Name Az -Repository PSGallery -Force
             Install-ModuleIfMissing Az.Accounts -Force -AllowClobber
             Install-ModuleIfMissing Az.ConnectedMachine -Force -AllowClobber
             Install-ModuleIfMissing Az.Resources -Force -AllowClobber
-            echo "Installed modules"
-            $id = (Get-AzContext).Tenant.Id
+
+            $tenantId = (Get-AzContext).Tenant.Id
             $token = (Get-AzAccessToken).Token
-            $accountid = (Get-AzContext).Account.Id
-            Invoke-AzStackHciArcInitialization -SubscriptionID $subscriptionId -ResourceGroup $resourceGroupName -TenantID $id -Region $region -Cloud "AzureCloud" -ArmAccessToken $token -AccountID  $accountid
+
+            $machineName = [System.Net.Dns]::GetHostName()
+            $correlationID = New-Guid
+            & "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe" connect --resource-group "$resourceGroupName" --resource-name "$machineName" --tenant-id "$tenantId" --location "$region" --subscription-id "$subscriptionId" --cloud "AzureCloud" --correlation-id "$correlationID" --access-token "$token";
             $exitCode = $LASTEXITCODE
-            $script:ErrorActionPreference = 'Stop'
             if ($exitCode -eq 0) {
                 echo "Arc server connected!"
             }
@@ -128,6 +125,18 @@ for ($count = 0; $count -lt 3; $count++) {
                 throw "Arc server connection failed"
             }
 
+            echo "PUT edge device resource to install mandatory extensions"
+            $uri = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName/providers/Microsoft.HybridCompute/machines/$machineName/providers/Microsoft.AzureStackHCI/edgeDevices/default?api-version=2021-10-01"
+            $body = @{
+                "kind" = "HCI";
+                "properties" = @{};
+            }
+            $headers = @{
+                "Authorization" = "Bearer $token";
+            }
+            Invoke-RestMethod -Uri $uri -Method Put -Headers $headers -Body ($body | ConvertTo-Json)
+
+            echo "Waiting for LCM and Device Management extensions to be ready"
             sleep 600
             $waitCount = 0
             $ready = $false

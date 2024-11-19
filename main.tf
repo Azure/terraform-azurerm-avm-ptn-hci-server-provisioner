@@ -1,8 +1,25 @@
+data "azuread_service_principal" "hci_rp" {
+  count = var.rp_service_principal_object_id == "" ? 1 : 0
+
+  client_id = "1412d89f-b8a8-4111-b4fd-e82905cbd85d"
+}
+
+resource "azurerm_role_assignment" "hci_rp_role_assign" {
+  for_each = local.rp_roles
+
+  principal_id         = var.rp_service_principal_object_id == "" ? data.azuread_service_principal.hci_rp[0].object_id : var.rp_service_principal_object_id
+  scope                = "/subscriptions/${var.subscription_id}/resourceGroups/${var.resource_group_name}"
+  role_definition_name = each.value
+
+  depends_on = [data.azuread_service_principal.hci_rp]
+}
+
 resource "terraform_data" "replacement" {
   input = var.resource_group_name
 }
 
 resource "terraform_data" "provisioner" {
+  depends_on = [ azurerm_role_assignment.hci_rp_role_assign ]
   provisioner "local-exec" {
     command = "echo Connect ${var.name} to Azure Arc..."
   }
