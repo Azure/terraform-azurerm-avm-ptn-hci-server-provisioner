@@ -140,46 +140,32 @@ for ($count = 0; $count -lt $retryCount; $count++) {
             }
             Invoke-RestMethod -Uri $uri -Method Put -Headers $headers -Body ($body | ConvertTo-Json) -ContentType "application/json"
 
-            echo "Waiting for LCM and Device Management extensions to be ready"
+            echo "Waiting for Edge device resource to be ready"
             sleep 600
             $waitCount = 0
             $waitLimit = 60
             $ready = $false
             while (!$ready -and $waitCount -lt $waitLimit) {
                 Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal | Out-Null
+                $token = (Get-AzAccessToken).Token
+                $headers = @{
+                    "Authorization" = "Bearer $token";
+                }
                 try {
-                    $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeLifecycleManager" -ResourceGroup $resourceGroupName -MachineName $machineName -SubscriptionId $subscriptionId
-                    if ($extension.ProvisioningState -eq "Succeeded") {
+                    $resp = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
+                    if ($resp.properties.provisioningState -eq "Succeeded") {
                         $ready = $true
                     }
+                } catch {
+                    echo "Failed to get Edge device resource: $_"
                 } finally {
-                    echo "Waiting for LCM extension to be ready"
+                    echo "Waiting for Edge device resource to be ready"
                     $waitCount++
                     Start-Sleep -Seconds 30
                 }
             }
             if ($waitCount -ge $waitLimit) {
-                echo "Failed to provision LCM extension after $waitLimit retries."
-                throw "Failed to provision LCM extension."
-            }
-
-            $ready = $false
-            while (!$ready -and $waitCount -lt $waitLimit) {
-                Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal | Out-Null
-                try {
-                    $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeDeviceManagement" -ResourceGroup $resourceGroupName -MachineName $machineName -SubscriptionId $subscriptionId
-                    if ($extension.ProvisioningState -eq "Succeeded") {
-                        $ready = $true
-                    }
-                } finally {
-                    echo "Waiting for Device Management extension to be ready"
-                    $waitCount++
-                    Start-Sleep -Seconds 30
-                }
-            }
-            if ($waitCount -ge $waitLimit) {
-                echo "Failed to provision Device Management extension after $waitLimit retries."
-                throw "Failed to provision Device Management extension."
+                throw "Edge device resource is not ready after 30 minutes."
             }
         } -ArgumentList $subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret
 
