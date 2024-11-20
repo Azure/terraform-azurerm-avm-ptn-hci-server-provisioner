@@ -143,10 +143,11 @@ for ($count = 0; $count -lt $retryCount; $count++) {
             echo "Waiting for LCM and Device Management extensions to be ready"
             sleep 600
             $waitCount = 0
+            $waitLimit = 60
             $ready = $false
-            while (!$ready -and $waitCount -lt 60) {
-                Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
-                $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeLifecycleManager" -ResourceGroup $resourceGroupName -MachineName $env:COMPUTERNAME -SubscriptionId $subscriptionId
+            while (!$ready -and $waitCount -lt $waitLimit) {
+                Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal | Out-Null
+                $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeLifecycleManager" -ResourceGroup $resourceGroupName -MachineName $machineName -SubscriptionId $subscriptionId
                 if ($extension.ProvisioningState -eq "Succeeded") {
                     $ready = $true
                 }
@@ -156,10 +157,15 @@ for ($count = 0; $count -lt $retryCount; $count++) {
                     Start-Sleep -Seconds 30
                 }
             }
+            if ($waitCount -ge $waitLimit) {
+                echo "Failed to provision LCM extension after $waitLimit retries."
+                throw "Failed to provision LCM extension."
+            }
+
             $ready = $false
-            while (!$ready -and $waitCount -lt 60) {
-                Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
-                $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeDeviceManagement" -ResourceGroup $resourceGroupName -MachineName $env:COMPUTERNAME -SubscriptionId $subscriptionId
+            while (!$ready -and $waitCount -lt $waitLimit) {
+                Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal | Out-Null
+                $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeDeviceManagement" -ResourceGroup $resourceGroupName -MachineName $machineName -SubscriptionId $subscriptionId
                 if ($extension.ProvisioningState -eq "Succeeded") {
                     $ready = $true
                 }
@@ -169,7 +175,13 @@ for ($count = 0; $count -lt $retryCount; $count++) {
                     Start-Sleep -Seconds 30
                 }
             }
+            if ($waitCount -ge $waitLimit) {
+                echo "Failed to provision Device Management extension after $waitLimit retries."
+                throw "Failed to provision Device Management extension."
+            }
         } -ArgumentList $subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret
+
+        echo "Arc server connected and all mandatory extensions are ready!"
         break
     }
     catch {
