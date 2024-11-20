@@ -88,15 +88,15 @@ for ($count = 0; $count -lt $retryCount; $count++) {
 
             echo "Validate BITS is working"
             $job = Start-BitsTransfer -Source https://aka.ms -Destination $env:TEMP -TransferType Download -Asynchronous
-            $count = 0
-            while ($job.JobState -ne "Transferred" -and $count -lt 30) {
+            $bitsRetry = 0
+            while ($job.JobState -ne "Transferred" -and $bitsRetry -lt 30) {
                 if ($job.JobState -eq "TransientError") {
                     throw "BITS transfer failed"
                 }
                 sleep 6
-                $count++
+                $bitsRetry++
             }
-            if ($count -ge 30) {
+            if ($bitsRetry -ge 30) {
                 throw "BITS transfer failed after 3 minutes. Job state: $job.JobState"
             }
 
@@ -147,11 +147,12 @@ for ($count = 0; $count -lt $retryCount; $count++) {
             $ready = $false
             while (!$ready -and $waitCount -lt $waitLimit) {
                 Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal | Out-Null
-                $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeLifecycleManager" -ResourceGroup $resourceGroupName -MachineName $machineName -SubscriptionId $subscriptionId
-                if ($extension.ProvisioningState -eq "Succeeded") {
-                    $ready = $true
-                }
-                else {
+                try {
+                    $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeLifecycleManager" -ResourceGroup $resourceGroupName -MachineName $machineName -SubscriptionId $subscriptionId
+                    if ($extension.ProvisioningState -eq "Succeeded") {
+                        $ready = $true
+                    }
+                } finally {
                     echo "Waiting for LCM extension to be ready"
                     $waitCount++
                     Start-Sleep -Seconds 30
@@ -165,11 +166,12 @@ for ($count = 0; $count -lt $retryCount; $count++) {
             $ready = $false
             while (!$ready -and $waitCount -lt $waitLimit) {
                 Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal | Out-Null
-                $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeDeviceManagement" -ResourceGroup $resourceGroupName -MachineName $machineName -SubscriptionId $subscriptionId
-                if ($extension.ProvisioningState -eq "Succeeded") {
-                    $ready = $true
-                }
-                else {
+                try {
+                    $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeDeviceManagement" -ResourceGroup $resourceGroupName -MachineName $machineName -SubscriptionId $subscriptionId
+                    if ($extension.ProvisioningState -eq "Succeeded") {
+                        $ready = $true
+                    }
+                } finally {
                     echo "Waiting for Device Management extension to be ready"
                     $waitCount++
                     Start-Sleep -Seconds 30
