@@ -9,6 +9,7 @@ param(
 $script:ErrorActionPreference = 'Stop'
 echo "Start to connect Arc server!"
 $count = 0
+$retryCount = 3
 
 if ($authType -eq "CredSSP") {
     try {
@@ -49,7 +50,7 @@ if ($authType -eq "CredSSP") {
         echo "Enable-WSManCredSSP failed: $_"
     }
 }
-for ($count = 0; $count -lt 3; $count++) {
+for ($count = 0; $count -lt $retryCount; $count++) {
     try {
         $secpasswd = ConvertTo-SecureString $password -AsPlainText -Force
         $cred = New-Object System.Management.Automation.PSCredential -ArgumentList ".\$username", $secpasswd
@@ -87,40 +88,40 @@ for ($count = 0; $count -lt 3; $count++) {
 
             echo "Validate BITS is working"
             $job = Start-BitsTransfer -Source https://aka.ms -Destination $env:TEMP -TransferType Download -Asynchronous
-            $count = 0
-            while ($job.JobState -ne "Transferred" -and $count -lt 30) {
+            $bitsRetry = 0
+            while ($job.JobState -ne "Transferred" -and $bitsRetry -lt 30) {
                 if ($job.JobState -eq "TransientError") {
                     throw "BITS transfer failed"
                 }
                 sleep 6
-                $count++
+                $bitsRetry++
             }
-            if ($count -ge 30) {
+            if ($bitsRetry -ge 30) {
                 throw "BITS transfer failed after 3 minutes. Job state: $job.JobState"
             }
 
-            $creds = [System.Management.Automation.PSCredential]::new($servicePrincipalId, (ConvertTo-SecureString $servicePrincipalSecret -AsPlainText -Force))
-
+            echo "Install modules"
             Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force -Confirm:$false
-
             Install-ModuleIfMissing -Name Az -Repository PSGallery -Force
-
-            Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
-            echo "login to Azure"
-
-            Install-Module AzSHCI.ARCInstaller -Force -AllowClobber
-            Install-Module Az.StackHCI -Force -AllowClobber -RequiredVersion 2.2.3
-            Install-Module AzStackHci.EnvironmentChecker -Repository PSGallery -Force -AllowClobber
             Install-ModuleIfMissing Az.Accounts -Force -AllowClobber
             Install-ModuleIfMissing Az.ConnectedMachine -Force -AllowClobber
             Install-ModuleIfMissing Az.Resources -Force -AllowClobber
-            echo "Installed modules"
-            $id = (Get-AzContext).Tenant.Id
+
+            echo "login to Azure"
+            $creds = [System.Management.Automation.PSCredential]::new($servicePrincipalId, (ConvertTo-SecureString $servicePrincipalSecret -AsPlainText -Force))
+            Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
+            $tenantId = (Get-AzContext).Tenant.Id
             $token = (Get-AzAccessToken).Token
-            $accountid = (Get-AzContext).Account.Id
-            Invoke-AzStackHciArcInitialization -SubscriptionID $subscriptionId -ResourceGroup $resourceGroupName -TenantID $id -Region $region -Cloud "AzureCloud" -ArmAccessToken $token -AccountID  $accountid
+
+            $machineName = [System.Net.Dns]::GetHostName()
+            $correlationID = New-Guid
+            $azcmagentPath = "$env:ProgramW6432\AzureConnectedMachineAgent\azcmagent.exe"
+            if (!(Test-Path $azcmagentPath)) {
+                wget -Uri "https://aka.ms/AzureConnectedMachineAgent" -OutFile "$env:TEMP\AzureConnectedMachineAgent.msi"
+                msiexec /i "$env:TEMP\AzureConnectedMachineAgent.msi" /l*v "$env:TEMP\AzureConnectedMachineAgentInstall.log" /qn
+            }
+            & "$azcmagentPath" connect --resource-group "$resourceGroupName" --resource-name "$machineName" --tenant-id "$tenantId" --location "$region" --subscription-id "$subscriptionId" --cloud "AzureCloud" --correlation-id "$correlationID" --access-token "$token";
             $exitCode = $LASTEXITCODE
-            $script:ErrorActionPreference = 'Stop'
             if ($exitCode -eq 0) {
                 echo "Arc server connected!"
             }
@@ -128,35 +129,47 @@ for ($count = 0; $count -lt 3; $count++) {
                 throw "Arc server connection failed"
             }
 
+            echo "PUT edge device resource to install mandatory extensions"
+            $uri = "https://management.azure.com/subscriptions/$subscriptionId/resourceGroups/$resourceGroupName/providers/Microsoft.HybridCompute/machines/$machineName/providers/Microsoft.AzureStackHCI/edgeDevices/default?api-version=2024-04-01"
+            $body = @{
+                "kind" = "HCI";
+                "properties" = @{};
+            }
+            $headers = @{
+                "Authorization" = "Bearer $token";
+            }
+            Invoke-RestMethod -Uri $uri -Method Put -Headers $headers -Body ($body | ConvertTo-Json) -ContentType "application/json"
+
+            echo "Waiting for Edge device resource to be ready"
             sleep 600
             $waitCount = 0
+            $waitLimit = 60
             $ready = $false
-            while (!$ready -and $waitCount -lt 60) {
-                Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
-                $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeLifecycleManager" -ResourceGroup $resourceGroupName -MachineName $env:COMPUTERNAME -SubscriptionId $subscriptionId
-                if ($extension.ProvisioningState -eq "Succeeded") {
-                    $ready = $true
+            while (!$ready -and $waitCount -lt $waitLimit) {
+                Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal | Out-Null
+                $token = (Get-AzAccessToken).Token
+                $headers = @{
+                    "Authorization" = "Bearer $token";
                 }
-                else {
-                    echo "Waiting for LCM extension to be ready"
+                try {
+                    $resp = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
+                    if ($resp.properties.provisioningState -eq "Succeeded") {
+                        $ready = $true
+                    }
+                } catch {
+                    echo "Failed to get Edge device resource: $_"
+                } finally {
+                    echo "Waiting for Edge device resource to be ready"
                     $waitCount++
                     Start-Sleep -Seconds 30
                 }
             }
-            $ready = $false
-            while (!$ready -and $waitCount -lt 60) {
-                Connect-AzAccount -Subscription $subscriptionId -Tenant $tenant -Credential $creds -ServicePrincipal
-                $extension = Get-AzConnectedMachineExtension -Name "AzureEdgeDeviceManagement" -ResourceGroup $resourceGroupName -MachineName $env:COMPUTERNAME -SubscriptionId $subscriptionId
-                if ($extension.ProvisioningState -eq "Succeeded") {
-                    $ready = $true
-                }
-                else {
-                    echo "Waiting for Device Management extension to be ready"
-                    $waitCount++
-                    Start-Sleep -Seconds 30
-                }
+            if ($waitCount -ge $waitLimit) {
+                throw "Edge device resource is not ready after 30 minutes."
             }
         } -ArgumentList $subscriptionId, $resourceGroupName, $region, $tenant, $servicePrincipalId, $servicePrincipalSecret
+
+        echo "Arc server connected and all mandatory extensions are ready!"
         break
     }
     catch {
@@ -169,6 +182,7 @@ for ($count = 0; $count -lt 3; $count++) {
     }
 }
 
-if ($count -ge 3) {
-    throw "Failed to connect Arc server after 3 retries."
+if ($count -ge $retryCount) {
+    echo "Failed to connect Arc server after $retryCount retries."
+    throw "Arc server connection failed"
 }
