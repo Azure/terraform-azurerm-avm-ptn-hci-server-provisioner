@@ -92,15 +92,15 @@ for ($count = 0; $count -lt $retryCount; $count++) {
     
                 echo "Validate BITS is working"
                 $job = Start-BitsTransfer -Source https://aka.ms -Destination $env:TEMP -TransferType Download -Asynchronous
-                $count = 0
-                while ($job.JobState -ne "Transferred" -and $count -lt 30) {
+                $bitsRetry = 0
+                while ($job.JobState -ne "Transferred" -and $bitsRetry -lt 30) {
                     if ($job.JobState -eq "TransientError") {
                         throw "BITS transfer failed"
                     }
                     sleep 6
-                    $count++
+                    $bitsRetry++
                 }
-                if ($count -ge 30) {
+                if ($bitsRetry -ge 30) {
                     throw "BITS transfer failed after 3 minutes. Job state: $job.JobState"
                 }
     
