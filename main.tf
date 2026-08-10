@@ -6,12 +6,10 @@ resource "terraform_data" "provisioner" {
   provisioner "local-exec" {
     command = "echo Connect ${var.name} to Azure Arc..."
   }
-
   provisioner "local-exec" {
     command     = "powershell.exe -ExecutionPolicy Bypass -NoProfile -File ${path.module}/connect.ps1 -userName ${var.local_admin_user} -password \"${var.local_admin_password}\" -authType ${var.authentication_method} -ip ${var.server_ip} -port ${var.winrm_port} -subscriptionId ${var.subscription_id} -resourceGroupName ${var.resource_group_name} -region ${var.location} -tenant ${var.tenant} -servicePrincipalId ${var.service_principal_id} -servicePrincipalSecret ${var.service_principal_secret} -expandC ${var.expand_c}"
     interpreter = ["PowerShell", "-Command"]
   }
-
   provisioner "local-exec" {
     command = "echo connected ${var.name}"
   }
@@ -37,4 +35,3 @@ resource "azurerm_role_assignment" "machine_role_assign" {
 
   depends_on = [data.azurerm_arc_machine.server]
 }
-
