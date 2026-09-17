@@ -74,7 +74,7 @@ module "test" {
   subscription_id          = var.subscription_id
   tenant                   = data.azurerm_client_config.current.tenant_id
   authentication_method    = "Credssp"
-  enable_telemetry         = var.enable_telemetry # see variables.tf
+  enable_telemetry         = false # see variables.tf
   expand_c                 = var.virtual_host_ip == "" ? false : true
   winrm_port               = var.virtual_host_ip == "" ? 5985 : local.server_ports[each.key]
 }
