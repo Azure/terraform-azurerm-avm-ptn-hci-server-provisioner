@@ -14,7 +14,7 @@ terraform {
 }
 
 provider "azurerm" {
-  subscription_id = var.subscription_id
+  subscription_id = local.subscription_id
   features {
     resource_group {
       prevent_deletion_if_contains_resources = false
@@ -43,17 +43,9 @@ module "naming" {
   version = "0.2.0"
 }
 
-# This is required for resource modules
-data "azurerm_resource_group" "rg" {
-  name = var.resource_group_name
-}
-
 data "azurerm_client_config" "current" {}
 
 # This is the module call
-# Do not specify location here due to the randomization above.
-# Leaving location as `null` will cause the module to use the resource group location
-# with a data source.
 module "test" {
   source = "../../"
   # source             = "Azure/avm-ptn-hci-server-provisioner/azurerm"
@@ -65,13 +57,13 @@ module "test" {
 
   local_admin_password     = var.local_admin_password
   local_admin_user         = var.local_admin_user
-  location                 = data.azurerm_resource_group.rg.location
+  location                 = var.location
   name                     = each.key
-  resource_group_name      = data.azurerm_resource_group.rg.name
+  resource_group_name      = local.resource_group_name
   server_ip                = var.virtual_host_ip == "" ? each.value : var.virtual_host_ip
   service_principal_id     = var.service_principal_id
   service_principal_secret = var.service_principal_secret
-  subscription_id          = var.subscription_id
+  subscription_id          = local.subscription_id
   tenant                   = data.azurerm_client_config.current.tenant_id
   authentication_method    = "Credssp"
   enable_telemetry         = var.enable_telemetry # see variables.tf

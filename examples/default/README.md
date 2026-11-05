@@ -12,17 +12,19 @@ Supply all seven required inputs from the approved lab configuration. Keep passw
 | --- | --- | --- |
 | `local_admin_password` | `TF_VAR_local_admin_password` | Local administrator password for the existing servers. |
 | `local_admin_user` | `TF_VAR_local_admin_user` | Matching local administrator username. |
-| `resource_group_name` | `TF_VAR_resource_group_name` | Existing resource group in the lab subscription. |
+| `resource_group_id` | `TF_VAR_resource_group_id` | Resource ID of the existing group in the lab subscription. |
+| `location` | `TF_VAR_location` | The existing group's Azure region. |
 | `service_principal_id` | `TF_VAR_service_principal_id` | Service principal used for Arc registration on the servers. |
 | `service_principal_secret` | `TF_VAR_service_principal_secret` | Valid secret for that registration service principal. |
-| `subscription_id` | `TF_VAR_subscription_id` | Authorized lab subscription used by both the AzureRM provider and server registration. |
 | `virtual_host_ip` | `TF_VAR_virtual_host_ip` | Reachable virtual-host address, or an explicitly supplied empty string for direct-server access. |
 
-`ARM_*` settings authenticate the Terraform providers; they do not populate these inputs or provide the server-registration credentials. The Terraform identity and registration service principal must have the required access to the same lab subscription and tenant. The example reads its location from the existing resource group and its tenant from the provider context.
+`ARM_*` settings authenticate the Terraform providers; they do not populate these inputs or provide the server-registration credentials. The Terraform identity and registration service principal must have the required access to the subscription in the resource group ID and the same tenant. The example derives the subscription and group name from the ID and obtains the tenant from the provider context. It does not look up or verify the group; supply its actual region.
 
-Use the exact case-sensitive environment names above or an uncommitted, securely supplied `terraform.tfvars` file in this example directory. The managed workflow forwards configured keys unchanged; an approved per-example `pre.ps1` can map legitimate fixture inputs into `.env` when needed. No fixture or mapping hook is included here. CI subscription selection alone does not provision a lab or replace these required inputs.
+Use the exact case-sensitive environment names above or an uncommitted, securely supplied `terraform.tfvars` file in this example directory. The managed workflow forwards configured keys unchanged.
 
-Confirm the server inventory and virtual-host port mappings in `locals.tf`. Applying requires a Windows runner with Windows PowerShell and WinRM/CredSSP connectivity to the servers: direct access uses port 5985, while virtual-host access uses the per-server mapped ports. `connect.ps1` performs registration during apply; it is not a policy-check setup hook. Policy planning still requires the real inputs and existing resource group.
+For the managed PR-check policy plan only, `pre.ps1` supplies missing inputs using a synthetic group ID in the selected subscription, a region, and non-secret provisioner placeholders. Supplied values take precedence. The hook writes only inside the isolated policy stage and does not supply deployment inputs or create a group. CI subscription selection alone does not provision a lab.
+
+Confirm the server inventory and virtual-host port mappings in `locals.tf`. Applying requires a Windows runner with Windows PowerShell and WinRM/CredSSP connectivity to the servers: direct access uses port 5985, while virtual-host access uses the per-server mapped ports. `connect.ps1` performs registration during apply; it is not a policy-check setup hook.
 
 ```hcl
 terraform {
@@ -41,7 +43,7 @@ terraform {
 }
 
 provider "azurerm" {
-  subscription_id = var.subscription_id
+  subscription_id = local.subscription_id
   features {
     resource_group {
       prevent_deletion_if_contains_resources = false
@@ -70,17 +72,9 @@ module "naming" {
   version = "0.2.0"
 }
 
-# This is required for resource modules
-data "azurerm_resource_group" "rg" {
-  name = var.resource_group_name
-}
-
 data "azurerm_client_config" "current" {}
 
 # This is the module call
-# Do not specify location here due to the randomization above.
-# Leaving location as `null` will cause the module to use the resource group location
-# with a data source.
 module "test" {
   source = "../../"
   # source             = "Azure/avm-ptn-hci-server-provisioner/azurerm"
@@ -92,13 +86,13 @@ module "test" {
 
   local_admin_password     = var.local_admin_password
   local_admin_user         = var.local_admin_user
-  location                 = data.azurerm_resource_group.rg.location
+  location                 = var.location
   name                     = each.key
-  resource_group_name      = data.azurerm_resource_group.rg.name
+  resource_group_name      = local.resource_group_name
   server_ip                = var.virtual_host_ip == "" ? each.value : var.virtual_host_ip
   service_principal_id     = var.service_principal_id
   service_principal_secret = var.service_principal_secret
-  subscription_id          = var.subscription_id
+  subscription_id          = local.subscription_id
   tenant                   = data.azurerm_client_config.current.tenant_id
   authentication_method    = "Credssp"
   enable_telemetry         = var.enable_telemetry # see variables.tf
@@ -124,7 +118,6 @@ The following resources are used by this module:
 
 - [random_integer.region_index](https://registry.terraform.io/providers/hashicorp/random/latest/docs/resources/integer) (resource)
 - [azurerm_client_config.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) (data source)
-- [azurerm_resource_group.rg](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/resource_group) (data source)
 
 <!-- markdownlint-disable MD013 -->
 ## Required Inputs
@@ -143,9 +136,15 @@ Description: The username for the local administrator account.
 
 Type: `string`
 
-### <a name="input_resource_group_name"></a> [resource\_group\_name](#input\_resource\_group\_name)
+### <a name="input_location"></a> [location](#input\_location)
 
-Description: The resource group where the resources will be deployed.
+Description: The Azure region for the existing resource group.
+
+Type: `string`
+
+### <a name="input_resource_group_id"></a> [resource\_group\_id](#input\_resource\_group\_id)
+
+Description: The resource ID of the existing resource group.
 
 Type: `string`
 
@@ -158,12 +157,6 @@ Type: `string`
 ### <a name="input_service_principal_secret"></a> [service\_principal\_secret](#input\_service\_principal\_secret)
 
 Description: The service principal secret for the Azure account.
-
-Type: `string`
-
-### <a name="input_subscription_id"></a> [subscription\_id](#input\_subscription\_id)
-
-Description: The subscription ID for the Azure account.
 
 Type: `string`
 
