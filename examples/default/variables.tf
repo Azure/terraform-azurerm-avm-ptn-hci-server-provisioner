@@ -9,9 +9,26 @@ variable "local_admin_user" {
   description = "The username for the local administrator account."
 }
 
-variable "resource_group_name" {
+variable "location" {
   type        = string
-  description = "The resource group where the resources will be deployed."
+  description = "The Azure region for the existing resource group."
+  nullable    = false
+
+  validation {
+    condition     = length(trimspace(var.location)) > 0
+    error_message = "The location must not be empty."
+  }
+}
+
+variable "resource_group_id" {
+  type        = string
+  description = "The resource ID of the existing resource group."
+  nullable    = false
+
+  validation {
+    condition     = can(regex("(?i)^/subscriptions/(?P<subscription_id>[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/resourcegroups/(?P<group_name>[\\pL\\p{Nd}_().-]{0,89}[\\pL\\p{Nd}_()-])$", var.resource_group_id))
+    error_message = "The resource_group_id must be a valid Azure resource group ID."
+  }
 }
 
 variable "service_principal_id" {
@@ -23,11 +40,6 @@ variable "service_principal_secret" {
   type        = string
   description = "The service principal secret for the Azure account."
   sensitive   = true
-}
-
-variable "subscription_id" {
-  type        = string
-  description = "The subscription ID for the Azure account."
 }
 
 # Virtual host related variables
